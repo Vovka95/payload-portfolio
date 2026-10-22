@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+.env
+.env.*
+!.env.example
+.pnpm-store
+.agents
+media
+coverage
+playwright-report
+test-results

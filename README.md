@@ -1,67 +1,97 @@
-# Payload Blank Template
+# Payload Portfolio
 
-This template comes configured with the bare minimum to get started on anything you need.
+Personal portfolio built with Next.js App Router, Payload CMS, PostgreSQL, TypeScript, and Tailwind CSS 4.
 
-## Quick start
+## Local development
 
-This template can be deployed directly from our Cloud hosting and it will setup MongoDB and cloud S3 object storage for media.
+Use Node.js 24.22.1 or newer in the 24.x release line and pnpm 11.24.0.
+The `packageManager` field pins pnpm; use Corepack if available.
 
-## Quick Start - local setup
+```sh
+cp .env.example .env
+```
 
-To spin up this template locally, follow these steps:
+Set `PAYLOAD_SECRET` to a random secret, for example using `openssl rand -hex 32`.
+The example database URL matches the PostgreSQL credentials in `.env.example`.
+If you change those credentials, update `DATABASE_URL` as well.
 
-### Clone
+```sh
+pnpm install
+docker compose up -d postgres
+pnpm dev
+```
 
-After you click the `Deploy` button above, you'll want to have standalone copy of this repo on your machine. If you've already cloned this repo, skip to [Development](#development).
+- Website: http://localhost:3000
+- CMS: http://localhost:3000/admin — create the first administrator on initial setup.
 
-### Development
+Docker Compose runs PostgreSQL only. Run Next.js locally with `pnpm dev`.
+The homepage does not require a database connection; CMS routes do.
 
-1. First [clone the repo](#clone) if you have not done so already
-2. `cd my-project && cp .env.example .env` to copy the example environment variables. You'll need to add the `MONGODB_URL` from your Cloud project to your `.env` if you want to use S3 storage and the MongoDB database that was created for you.
+## Structure
 
-3. `pnpm install && pnpm dev` to install dependencies and start the dev server
-4. open `http://localhost:3000` to open the app in your browser
+```text
+src/
+  app/
+    (frontend)/       Website routes, root layout, and Tailwind entry point
+    (payload)/        Payload admin and API routes
+  collections/       Payload collection schemas (Users, Media)
+  payload.config.ts  CMS and PostgreSQL configuration
+  payload-types.ts   Generated Payload types
+tests/
+  e2e/               Browser tests
+  int/               Payload integration tests
+```
 
-That's it! Changes made in `./src` will be reflected in your app. Follow the on-screen instructions to login and create your first admin user. Then check out [Production](#production) once you're ready to build and serve your app, and [Deployment](#deployment) when you're ready to go live.
+Add shared frontend components under `src/components/ui` and `src/components/layout`
+when needed. Keep route-specific components next to their route. Add shared utilities
+under `src/lib` as they become necessary; avoid empty placeholder modules.
 
-#### Docker (Optional)
+The website and CMS share one Next.js application. Payload configuration stays in
+`src/payload.config.ts`; there is no separate CMS service or Nx workspace.
 
-If you prefer to use Docker for local development instead of a local MongoDB instance, the provided docker-compose.yml file can be used.
+## Styling
 
-To do so, follow these steps:
+Use Tailwind utility classes for the website. Its CSS entry point is
+`src/app/(frontend)/globals.css`, imported only by the frontend layout.
+PostCSS is configured in `postcss.config.mjs`. Tailwind 4 uses CSS-first configuration;
+add design tokens with `@theme` in `globals.css` when needed.
 
-- Modify the `MONGODB_URL` in your `.env` file to `mongodb://127.0.0.1/<dbname>`
-- Modify the `docker-compose.yml` file's `MONGODB_URL` to match the above `<dbname>`
-- Run `docker-compose up` to start the database, optionally pass `-d` to run in the background.
+Payload retains its own styles. Use `src/app/(payload)/custom.scss` for intentional
+admin customizations rather than importing the frontend stylesheet.
 
-## How it works
+## Commands
 
-The Payload config is tailored specifically to the needs of most websites. It is pre-configured in the following ways:
+| Command                   | Purpose                                                  |
+| ------------------------- | -------------------------------------------------------- |
+| `pnpm dev`                | Start development server                                 |
+| `pnpm build`              | Create production build                                  |
+| `pnpm start`              | Serve production build                                   |
+| `pnpm lint`               | Check ESLint rules                                       |
+| `pnpm typecheck`          | Check TypeScript types                                   |
+| `pnpm format`             | Format source files                                      |
+| `pnpm format:check`       | Check formatting                                         |
+| `pnpm generate:types`     | Regenerate types after changing Payload schemas          |
+| `pnpm generate:importmap` | Regenerate Payload admin component imports               |
+| `pnpm test:int`           | Run integration tests (requires PostgreSQL)              |
+| `pnpm test:e2e`           | Run all browser tests (requires PostgreSQL and Chromium) |
 
-### Collections
+Install the test browser once with `pnpm exec playwright install chromium`.
+Run the frontend smoke test alone with:
 
-See the [Collections](https://payloadcms.com/docs/configuration/collections) docs for details on how to extend this functionality.
+```sh
+pnpm test:e2etests/e2e/frontend.e2e.spec.ts
+```
 
-- #### Users (Authentication)
+Admin tests create and delete a test user. Use a dedicated test database for the
+full test suite; do not point tests at a production database.
 
-  Users are auth-enabled collections that have access to the admin panel.
+## Production
 
-  For additional help, see the official [Auth Example](https://github.com/payloadcms/payload/tree/3.x/examples/auth) or the [Authentication](https://payloadcms.com/docs/authentication/overview#authentication-overview) docs.
+`next.config.ts` enables standalone output for the Dockerfile. Build the image with
+`docker build -t payload-portfolio .` and supply `DATABASE_URL` and `PAYLOAD_SECRET`
+at runtime. Environment files are excluded from the Docker build context.
 
-- #### Media
-
-  This is the uploads enabled collection. It features pre-configured sizes, focal point and manual resizing to help you manage your pictures.
-
-### Docker
-
-Alternatively, you can use [Docker](https://www.docker.com) to spin up this template locally. To do so, follow these steps:
-
-1. Follow [steps 1 and 2 from above](#development), the docker-compose file will automatically use the `.env` file in your project root
-1. Next run `docker-compose up`
-1. Follow [steps 4 and 5 from above](#development) to login and create your first admin user
-
-That's it! The Docker instance will help you get up and running quickly while also standardizing the development environment across your teams.
-
-## Questions
-
-If you have any issues or questions, reach out to us on [Discord](https://discord.com/invite/payload) or start a [GitHub discussion](https://github.com/payloadcms/payload/discussions).
+Persist `/app/media` when running uploads in a container, or configure external
+storage before deploying. Create and apply Payload database migrations as part of
+your production release process; development schema synchronization is not a
+production migration strategy.

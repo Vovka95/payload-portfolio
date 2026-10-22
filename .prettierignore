@@ -1,0 +1,12 @@
+node_modules/
+.next/
+.pnpm-store/
+pnpm-lock.yaml
+media/
+coverage/
+playwright-report/
+test-results/
+next-env.d.ts
+src/payload-types.ts
+src/app/(payload)/admin/importMap.js
+.agents/
